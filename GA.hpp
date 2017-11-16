@@ -8,6 +8,7 @@ double pow(double a, int b){
   return a*pow(a,b-1);
 }
 bool randomBool() {
+    srand (time(NULL));
     return 0 + (rand() % (1 - 0 + 1)) == 1;
 }
 struct INDIVIDUAL{
@@ -32,6 +33,7 @@ private:
   public:
     GA(int nIndividuals, int numG, int gSize, int min, int max);
     ~GA();
+    void SetNGenes(int n);
     void InitializeDemos();//Set values for each Individual
     void ShowDemos();
     void EvaluateDemos(Sudoku *p);
@@ -41,7 +43,9 @@ private:
     void ShowBestInd(Sudoku *p);
     void ShowProgenitors();
     void Selection();
+    void SelectionPerTournament();
     void Crossover(Sudoku *p);
+    void Crossover2p(Sudoku *p);
     void ShowNewDemos();
     void Mutation(Sudoku *p);
     void EvaluateNewDemos(Sudoku *p);
@@ -49,6 +53,9 @@ private:
     void ShowSolution();
     double GetBestFitness();
 };
+void GA::SetNGenes(int n){
+  nGenes=n;
+}
 double GA::GetBestFitness(){
   return demos[bestIndID].fitness;
 }
@@ -67,14 +74,14 @@ void GA::EvaluateNewDemos(Sudoku *p){
       solution[j] = DecodeInt(demos[i].chromosome,j);
     }
     newDemos[i].fitness=p->SolutionFitness(solution);
-    if (newDemos[i].fitness>newDemos[bestIndID].fitness)
+    if (newDemos[i].fitness<newDemos[bestIndID].fitness)
       bestNDIndID = i;
   }
   delete[] solution;
 }
 void GA::ReplaceOldDemos(){
   //Best Individual
-  if(demos[bestIndID].fitness> newDemos[bestNDIndID].fitness){
+  /*if(demos[bestIndID].fitness < newDemos[bestNDIndID].fitness){
     for(int i=0; i<nGenes*geneSize; i++)
       demos[0].chromosome[i] = demos[bestIndID].chromosome[i];
     demos[0].fitness = demos[bestIndID].fitness;
@@ -83,9 +90,24 @@ void GA::ReplaceOldDemos(){
     for(int i=0; i<nGenes*geneSize; i++)
       demos[0].chromosome[i] = newDemos[bestNDIndID].chromosome[i];
     demos[0].fitness = newDemos[bestNDIndID].fitness;
+  }*/
+  //Ordenar
+  bool state = true;
+  while(state){
+    state = false;
+    INDIVIDUAL aux;
+    for(int i=0; i<demosSize-1;i++){
+      if(demos[i].fitness>demos[i+1].fitness){
+        //Hacer swap
+        aux = demos[i];
+        demos[i] = demos[i+1];
+        demos[i+1]=aux;
+        state = true;
+      }
+    }
   }
   bestIndID=0;
-  for(int i=1; i<demosSize; i++){
+  for(int i=(int)(demosSize*0.5); i<demosSize; i++){
     for(int j=0; j<nGenes*geneSize; j++)
         demos[i].chromosome[j] = newDemos[i].chromosome[j];
       demos[i].fitness = newDemos[i].fitness;
@@ -144,7 +166,44 @@ void GA::Crossover(Sudoku *p){
       }
     }
   }
-  EvaluateNewDemos(p);
+}
+void GA::Crossover2p(Sudoku *p){
+  //1 point Crossover
+  double r; //Crossover probability
+  float point1 = nGenes*geneSize/3;
+  float point2 = nGenes-nGenes*geneSize/3;
+  for(int i=0; i<demosSize; i+=2){
+    r = (double)rand()/RAND_MAX;
+    if(r<Pc){
+      for(int j=0; j<nGenes*geneSize; j++){
+        //child 1
+        if(j<point1){
+          //Child 1
+          newDemos[i].chromosome[j] = demos[progenitor[i]].chromosome[j];
+          //Child 2
+          newDemos[i+1].chromosome[j] = demos[progenitor[i+1]].chromosome[j];
+        }
+        else if(j<point2){
+          //Child 1
+          newDemos[i].chromosome[j] = demos[progenitor[i+1]].chromosome[j];
+          //Child 2
+          newDemos[i+1].chromosome[j] = demos[progenitor[i]].chromosome[j];
+        }
+        else{
+          //Child 1
+          newDemos[i].chromosome[j] = demos[progenitor[i]].chromosome[j];
+          //Child 2
+          newDemos[i+1].chromosome[j] = demos[progenitor[i+1]].chromosome[j];
+        }
+      }
+    }
+    else{
+      for(int j=0; j<nGenes*geneSize;j++){
+        newDemos[i].chromosome[j] = demos[progenitor[i]].chromosome[j];
+        newDemos[i+1].chromosome[j] = demos[progenitor[i+1]].chromosome[j];
+      }
+    }
+  }
 }
 void GA::ShowProgenitors(){
   cout << "\nProgenitors: " << endl;
@@ -156,19 +215,33 @@ void GA::Selection(){
   double sum = 0;
   double aux = 0 ;
   double r;
-  //Toltal amount
+  //Total amount
   for (int i=0; i<demosSize; i++)
     sum+=demos[i].fitness;
   for(int i=0;i<demosSize; i++){
-    r = rand()%((int)sum+1);
+    r = rand()%((int)sum);
     aux = 0;
     for(int j=0; j<demosSize; j++){
       aux+=demos[j].fitness;
-      if(r<=aux){
+      if(r<aux){
         progenitor[i]=j;
         break;
       }
     }
+  }
+}
+void GA::SelectionPerTournament(){
+  int gladiators[7];
+  int winner = 0;
+  for(int i=0;i<demosSize; i++){
+    //Choose Gladiators
+    winner = 0;
+    for(int j=0; j<7; j++){
+      gladiators[j]= rand()%demosSize;
+      if(demos[gladiators[j]].fitness<demos[gladiators[winner]].fitness)
+        winner = j;
+    }
+    progenitor[i] = winner;
   }
 }
 void GA::ShowBestInd(Sudoku *p){
@@ -213,8 +286,9 @@ void GA::EvaluateDemos(Sudoku *p){
       solution[j] = DecodeInt(demos[i].chromosome,j);
     }
     demos[i].fitness=p->SolutionFitness(solution);
-    if (demos[i].fitness>demos[bestIndID].fitness)
+    if (demos[i].fitness<demos[bestIndID].fitness){
       bestIndID = i;
+    }
   }
   delete[] solution;
 }
@@ -237,8 +311,8 @@ void GA::InitializeDemos(){
   }
 }
 GA::GA(int nIndividuals, int numG, int gSize, int min, int max ){
-  Pm = 0.01;
-  Pc = 0.6;
+  Pm = 0.1;
+  Pc = 0.7;
   minValue = min;
   maxValue = max;
   nGenes = numG;
