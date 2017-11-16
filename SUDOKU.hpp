@@ -40,6 +40,7 @@ void Sudoku::ShowBestSudoku(unsigned int *solution){
 }
 int Sudoku::SolutionFitness(unsigned int *solution){
   int count = 0;
+  int qualify;
   CopySolution();
   for(int i=0; i<9; i++)
     for(int j=0; j<9; j++)
@@ -47,7 +48,14 @@ int Sudoku::SolutionFitness(unsigned int *solution){
         grid[i][j] = solution[count];
         count++;
       }
-  return CheckBoxes()+CheckRows()+CheckCols();
+  qualify=CheckBoxes()+CheckRows()+CheckCols();
+  CleanCols();
+  CleanRows();
+  CleanBoxes();
+  for(int i=0; i<9; i++)
+    for(int j=0; j<9; j++)
+      sgrid[i][j] = grid[i][j];
+  return qualify;
 }
 void Sudoku::CopySolution(){
   for(int i=0; i<9; i++)
@@ -117,6 +125,18 @@ int Sudoku::CheckBoxes(){
   return qualify;
 }
 void Sudoku::ShowSudoku(){
+  cout << "Sudoku: " << endl;
+  for(int i=0; i<9;i++){
+    for(int j=0; j<9; j++){
+      if(!(j%3)) cout << "\t";
+      cout << sgrid[i][j] << " ";
+    }
+    cout << endl;
+    if(!((i+1)%3)){
+      cout << endl;
+    }
+  }
+  cout << "Solution: " << endl;
   for(int i=0; i<9;i++){
     for(int j=0; j<9; j++){
       if(!(j%3)) cout << "\t";
@@ -168,8 +188,8 @@ void Sudoku::CleanCols(){
 void Sudoku::BeginSudoku(){
   for(int i=0; i<9; i++)
     for(int j=0; j<9; j++){
-      if(rand()%100<70) grid[i][j] = (rand()%max)+min;
-      else grid[i][j]=0;
+      /*if(rand()%100<99)*/ grid[i][j] = (rand()%max)+min;
+      //else grid[i][j]=0;
     }
   CleanBoxes();
   CleanRows();

@@ -238,7 +238,7 @@ void GA::InitializeDemos(){
 }
 GA::GA(int nIndividuals, int numG, int gSize, int min, int max ){
   Pm = 0.01;
-  Pc = 0.70;
+  Pc = 0.6;
   minValue = min;
   maxValue = max;
   nGenes = numG;
