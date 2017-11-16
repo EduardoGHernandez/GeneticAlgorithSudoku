@@ -1,0 +1,5 @@
+Im using this configuration for the Genetic Algorithm:
+-Roulette selection
+-1 point Crossover
+- Crossover Probability = 0.7
+-Mutation per bit probability = 0.01
